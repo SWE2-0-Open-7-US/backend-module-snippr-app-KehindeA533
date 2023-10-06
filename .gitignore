@@ -1,0 +1,9 @@
+# Ignore virtual environments for Python projects
+venv/
+__pycache__/
+
+# Ignore actual environment files
+.env
+
+# Include example or default environment files
+.env.example
