@@ -21,19 +21,28 @@ connection = psycopg2.connect(
 
 # Define SQL queries
 # CREATE
-CREATE_USER = """CREATE TABLE IF NOT EXISTS user (
+CREATE_USER = """CREATE TABLE IF NOT EXISTS "user" (
     id SERIAL PRIMARY KEY,
     email TEXT,
     password TEXT
 );"""
 
-CREATE_SNIPPET = """cREATE TABLE IF NOT EXISTS snippet (
+CREATE_SNIPPET = """CREATE TABLE IF NOT EXISTS snippet (
     id SERIAL PRIMARY KEY,
     language TEXT,
     code TEXT,
-    snippet_id INT
-    FOREIGN KEY(snippEt_id) REFERENCES user(id) ON DELETE CASCADE
+    snippet_id INT,
+    FOREIGN KEY(snippet_id) REFERENCES "user"(id) ON DELETE CASCADE
 );"""
+
+# Put
+# Define an SQL statement to insert data
+INSERT_USER_DATA = 'INSERT INTO "user" (email, password) VALUES (%s, %s) RETURNING id;'
+
+# Define an SQL statement to insert data
+INSERT_SNIPPET_DATA = (
+    "INSERT INTO snippet (language, code, snippet_id) VALUES (%s, %s, %s);"
+)
 
 
 #
