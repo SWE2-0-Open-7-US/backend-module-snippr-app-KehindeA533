@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 import psycopg2
 from cryptography.fernet import Fernet
+import bcrypt
 
 
 from dotenv import load_dotenv
@@ -63,9 +64,14 @@ def create_user():
         email = data["email"]
         password = data["password"]
 
+        # Hash and salt the password
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
         with connection:
             with connection.cursor as cursor:
-                cursor.execute(INSERT_USER_DATA, (email, password))
+                cursor.execute(
+                    INSERT_USER_DATA, (email, hashed_password)
+                )  # hashed password
                 user_id = cursor.fetchone()[0]
                 connection.commit()
 
