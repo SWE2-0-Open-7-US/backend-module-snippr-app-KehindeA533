@@ -1,12 +1,18 @@
 from flask import Flask, request, jsonify
 import os
 import psycopg2
+from cryptography.fernet import Fernet
+import bcrypt
+
 
 from dotenv import load_dotenv
 
 ## Load Environment Variables
 load_dotenv()
 password = os.getenv("DATABASE_PASSWORD")
+
+# Generate and store a secret key #- Should i create different keys for each endpoint
+secret_key = Fernet.generate_key()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -58,9 +64,14 @@ def create_user():
         email = data["email"]
         password = data["password"]
 
+        # Hash and salt the password
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
         with connection:
             with connection.cursor as cursor:
-                cursor.execute(INSERT_USER_DATA, (email, password))
+                cursor.execute(
+                    INSERT_USER_DATA, (email, hashed_password)
+                )  # hashed password
                 user_id = cursor.fetchone()[0]
                 connection.commit()
 
@@ -81,9 +92,17 @@ def add_snippet(user_id):
         data = request.get_json()
         language = data["language"]
         code = data["code"]
+
+        # Encrypt the code code content using the secret key
+        fernet = Fernet(secret_key)
+        encrypted_language = fernet.encrypt(language.encode())
+        encrypted_code = fernet.encrypt(code.encode())
+
         with connection:
             with connection.cursor() as cursor:
-                cursor.execute(INSERT_SNIPPET_DATA, (language, code, user_id))
+                cursor.execute(
+                    INSERT_SNIPPET_DATA, (encrypted_language, encrypted_code, user_id)
+                )
                 connection.commit()
 
         return (
@@ -109,10 +128,12 @@ def get_all_snippets():
         # Convert the snippet data to a list of dictionaries
         snippet_list = []
         for snippet in snippets:
+            decrypted_language = Fernet.decrypt(snippet[1].encode()).decode()
+            decrypted_code = Fernet.decrypt(snippet[2].encode()).decode()
             snippet_dict = {
                 "id": snippet[0],
-                "language": snippet[1],
-                "code": snippet[2],
+                "language": decrypted_language,
+                "code": decrypted_code,
             }
             snippet_list.append(snippet_dict)
 
@@ -134,10 +155,13 @@ def get_a_snippet(user_id):
         if not snippet:
             return jsonify({"message": "Snippet not found"}), 404
 
+        # Decrypt the code content using the secret key
+        decrypted_language = Fernet.decrypt(snippet[1].encode()).decode()
+        decrypted_code = Fernet.decrypt(snippet[2].encode()).decode()
         snippet_dict = {
             "id": snippet[0],
-            "language": snippet[1],
-            "code": snippet[2],
+            "language": decrypted_language,
+            "code": decrypted_code,
         }
 
         return jsonify(snippet_dict)
